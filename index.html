@@ -1,0 +1,80 @@
+from flask import Flask, render_template_string, request, redirect, session
+
+app = Flask(__name__)
+app.secret_key = "segredo123"
+
+# Banco de dados simples (memória)
+alunos = []
+
+# Login fixo do professor
+USUARIO = "LEElG"
+SENHA = "2010"
+
+# Página inicial (alunos visualizam)
+@app.route("/")
+def home():
+    return render_template_string("""
+    <h1>Sistema Escolar</h1>
+    <h2>Lista de Notas</h2>
+    {% for aluno in alunos %}
+        <p><b>{{ aluno['nome'] }}</b> - Nota: {{ aluno['nota'] }}</p>
+    {% endfor %}
+    <br>
+    <a href="/login">Área do Professor</a>
+    """, alunos=alunos)
+
+
+# Login
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = request.form["username"]
+        senha = request.form["password"]
+
+        if user == USUARIO and senha == SENHA:
+            session["logado"] = True
+            return redirect("/admin")
+        else:
+            return "Login inválido!"
+
+    return """
+    <h2>Login Professor</h2>
+    <form method="post">
+        Usuário: <input type="text" name="username"><br><br>
+        Senha: <input type="password" name="password"><br><br>
+        <input type="submit" value="Entrar">
+    </form>
+    """
+
+
+# Painel do professor
+@app.route("/admin", methods=["GET", "POST"])
+def admin():
+    if not session.get("logado"):
+        return redirect("/login")
+
+    if request.method == "POST":
+        nome = request.form["nome"]
+        nota = request.form["nota"]
+        alunos.append({"nome": nome, "nota": nota})
+
+    return render_template_string("""
+    <h2>Painel do Professor</h2>
+    <form method="post">
+        Nome do aluno: <input type="text" name="nome"><br><br>
+        Nota: <input type="number" name="nota"><br><br>
+        <input type="submit" value="Adicionar">
+    </form>
+    <br>
+    <a href="/">Ver como aluno</a>
+    """)
+
+
+# Logout
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+if __name__ == "__main__":
+    app.run(debug=True)
